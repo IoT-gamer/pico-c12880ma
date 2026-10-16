@@ -1,5 +1,6 @@
 #include "c12880ma.h"
 #include "hardware/timer.h" // Required for precise busy_wait_us delays
+#include "hardware/sync.h"
 
 void c12880ma_init(const c12880ma_config_t *config) {
     // Set desired pins to OUTPUT
@@ -31,9 +32,11 @@ void c12880ma_set_led(const c12880ma_config_t *config, bool on) {
 }
 
 void c12880ma_read(const c12880ma_config_t *config, uint16_t *data_buffer) {
-    const uint32_t delay_time = 1; // 1 microsecond delay
+    const uint32_t delay_time = 1;
 
-    // Start clock cycle and set start pulse to signal start
+    // DISABLE INTERRUPTS to prevent BLE from causing noise/frequency shifts
+    uint32_t irq_status = save_and_disable_interrupts(); 
+
     gpio_put(config->clk_pin, 0);
     busy_wait_us(delay_time);
     gpio_put(config->clk_pin, 1);
@@ -43,59 +46,41 @@ void c12880ma_read(const c12880ma_config_t *config, uint16_t *data_buffer) {
     gpio_put(config->st_pin, 1);
     busy_wait_us(delay_time);
 
-    // Sample for a period of time
     for (int i = 0; i < 15; i++) {
-        gpio_put(config->clk_pin, 1);
-        busy_wait_us(delay_time);
-        gpio_put(config->clk_pin, 0);
-        busy_wait_us(delay_time);
+        gpio_put(config->clk_pin, 1); busy_wait_us(delay_time);
+        gpio_put(config->clk_pin, 0); busy_wait_us(delay_time);
     }
 
-    // Set SPEC_ST to low
     gpio_put(config->st_pin, 0);
 
-    // Enforce C12880MA hardware minimum of 11 integration cycles
-    uint32_t int_cycles = config->integration_cycles < 11 ? 11 : config->integration_cycles;
-    
-    // Sample for a period of time (Integration Time)
-    for (uint32_t i = 0; i < int_cycles; i++) {
-        gpio_put(config->clk_pin, 1);
-        busy_wait_us(delay_time);
-        gpio_put(config->clk_pin, 0);
-        busy_wait_us(delay_time);
+    for (int i = 0; i < 85; i++) {
+        gpio_put(config->clk_pin, 1); busy_wait_us(delay_time);
+        gpio_put(config->clk_pin, 0); busy_wait_us(delay_time);
     }
 
-    // One more clock pulse before the actual read
     gpio_put(config->clk_pin, 1);
     busy_wait_us(delay_time);
     gpio_put(config->clk_pin, 0);
     busy_wait_us(delay_time);
 
-    // Select the correct ADC channel. Pico ADC pins are 26 (ch0), 27 (ch1), 28 (ch2), 29 (ch3)
     adc_select_input(config->video_pin - 26);
 
-    // Read from SPEC_VIDEO
     for (int i = 0; i < C12880MA_CHANNELS; i++) {
-        // Read 12-bit ADC value (0-4095)
         data_buffer[i] = adc_read();
-        
-        gpio_put(config->clk_pin, 1);
-        busy_wait_us(delay_time);
-        gpio_put(config->clk_pin, 0);
-        busy_wait_us(delay_time);
+        gpio_put(config->clk_pin, 1); busy_wait_us(delay_time);
+        gpio_put(config->clk_pin, 0); busy_wait_us(delay_time);
     }
 
-    // Set SPEC_ST to high
     gpio_put(config->st_pin, 1);
 
-    // Sample for a small amount of time
     for (int i = 0; i < 7; i++) {
-        gpio_put(config->clk_pin, 1);
-        busy_wait_us(delay_time);
-        gpio_put(config->clk_pin, 0);
-        busy_wait_us(delay_time);
+        gpio_put(config->clk_pin, 1); busy_wait_us(delay_time);
+        gpio_put(config->clk_pin, 0); busy_wait_us(delay_time);
     }
 
     gpio_put(config->clk_pin, 1);
     busy_wait_us(delay_time);
+
+    // RESTORE INTERRUPTS
+    restore_interrupts(irq_status); 
 }

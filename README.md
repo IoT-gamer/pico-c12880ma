@@ -8,7 +8,7 @@ This library provides a simple API to handle the precise timing sequences requir
 * **FetchContent Ready:** Easily integrate into your Pico CMake projects without manually copying files.
 * **Configurable Pins:** Define your own GPIOs for Clock, Start, LED, and Video (ADC) connections.
 * **Precise Timing:** Uses the Pico's hardware timers to manage the strict microsecond-level clock pulse requirements.
-* **Variable Integration Time:** Control sensor sensitivity by defining the number of accumulation clock cycles (hardware minimum of 11).
+* **Variable Integration Time:** Control sensor sensitivity.
 * **LED Control:** Helper function to toggle the breakout board's onboard super-bright white LED for fluorescence applications.
 
 ## Hardware Setup
@@ -61,7 +61,6 @@ Here is a basic `main.c` that initializes the spectrometer, turns on the illumin
 int main() {
     stdio_init_all();
     
-    // Wait for USB connection (optional)
     while (!stdio_usb_connected()) {
         sleep_ms(100);
     }
@@ -72,32 +71,25 @@ int main() {
         .st_pin = 3,
         .video_pin = 26, // Must be GPIO 26, 27, 28, or 29
         .led_pin = 4,    // Set to 255 if unused
-        .integration_cycles = 85 // Adjust this to control sensor sensitivity (min 11)
+        .integration_time = 100 // Target integration time in milliseconds
     };
 
     // Initialize GPIOs and ADC
     c12880ma_init(&spec_cfg);
-    
-    // Turn on the super bright white LED for illumination
     c12880ma_set_led(&spec_cfg, true); 
 
-    // Buffer to hold the 288 pixel readings
     uint16_t spectral_data[C12880MA_CHANNELS];
 
     while (true) {
-        // Perform the sensor read
         c12880ma_read(&spec_cfg, spectral_data);
 
-        // Print output as CSV for easy plotting (e.g., in Serial Plotter)
         for (int i = 0; i < C12880MA_CHANNELS; i++) {
             printf("%d", spectral_data[i]);
-            if (i < C12880MA_CHANNELS - 1) {
-                printf(",");
-            }
+            if (i < C12880MA_CHANNELS - 1) printf(",");
         }
         printf("\n");
 
-        sleep_ms(10);
+        sleep_ms(spec_cfg.integration_time);
     }
 }
 ```
