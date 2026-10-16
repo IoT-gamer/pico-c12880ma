@@ -8,9 +8,10 @@ int main() {
     c12880ma_config_t spec_cfg = {
         .clk_pin = 2,
         .st_pin = 3,
-        .video_pin = 26, // Must be GPIO 26, 27, 28, or 29
-        .led_pin = 4
-    };
+        .video_pin = 26, 
+        .led_pin = 4,
+        .integration_cycles = 85 // Adjust this value to control sensitivity
+    };    
 
     c12880ma_init(&spec_cfg);
     c12880ma_set_led(&spec_cfg, true); // Turn on the super bright white LED

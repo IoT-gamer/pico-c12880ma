@@ -8,6 +8,7 @@ This library provides a simple API to handle the precise timing sequences requir
 * **FetchContent Ready:** Easily integrate into your Pico CMake projects without manually copying files.
 * **Configurable Pins:** Define your own GPIOs for Clock, Start, LED, and Video (ADC) connections.
 * **Precise Timing:** Uses the Pico's hardware timers to manage the strict microsecond-level clock pulse requirements.
+* **Variable Integration Time:** Control sensor sensitivity by defining the number of accumulation clock cycles (hardware minimum of 11).
 * **LED Control:** Helper function to toggle the breakout board's onboard super-bright white LED for fluorescence applications.
 
 ## Hardware Setup
@@ -70,7 +71,8 @@ int main() {
         .clk_pin = 2,
         .st_pin = 3,
         .video_pin = 26, // Must be GPIO 26, 27, 28, or 29
-        .led_pin = 4     // Set to 255 if unused
+        .led_pin = 4,    // Set to 255 if unused
+        .integration_cycles = 85 // Adjust this to control sensor sensitivity (min 11)
     };
 
     // Initialize GPIOs and ADC
@@ -101,7 +103,7 @@ int main() {
 ```
 ## API Reference
 * `void c12880ma_init(const c12880ma_config_t *config)`: Sets up GPIO directions, initial pin states, and initializes the Pico ADC.
-* `void c12880ma_read(const c12880ma_config_t *config, uint16_t *data_buffer)`: Executes the bit-bang timing sequence and fills the provided array with 12-bit analog readings (0-4095).
+* `void c12880ma_read(const c12880ma_config_t *config, uint16_t *data_buffer)`: Executes the bit-bang timing sequence and fills the provided array with 12-bit analog readings (0-4095). Integration time is determined by `config->integration_cycles`.
 * `void c12880ma_set_led(const c12880ma_config_t *config, bool on)`: Toggles the onboard white LED.
 
 ## License

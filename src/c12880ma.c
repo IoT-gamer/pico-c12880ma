@@ -54,8 +54,11 @@ void c12880ma_read(const c12880ma_config_t *config, uint16_t *data_buffer) {
     // Set SPEC_ST to low
     gpio_put(config->st_pin, 0);
 
-    // Sample for a period of time
-    for (int i = 0; i < 85; i++) {
+    // Enforce C12880MA hardware minimum of 11 integration cycles
+    uint32_t int_cycles = config->integration_cycles < 11 ? 11 : config->integration_cycles;
+    
+    // Sample for a period of time (Integration Time)
+    for (uint32_t i = 0; i < int_cycles; i++) {
         gpio_put(config->clk_pin, 1);
         busy_wait_us(delay_time);
         gpio_put(config->clk_pin, 0);

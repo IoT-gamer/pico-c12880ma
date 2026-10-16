@@ -16,6 +16,7 @@ typedef struct {
     uint st_pin;     // START (ST) pin mapping
     uint video_pin;  // Must be a Pico ADC capable pin (26, 27, 28, or 29)
     uint led_pin;    // Pin to control the super bright white LED (use 255 if unused)
+    uint32_t integration_cycles; // Controls integration time (minimum 11)
 } c12880ma_config_t;
 
 // Initialize the GPIOs and the ADC peripheral for the spectrometer
